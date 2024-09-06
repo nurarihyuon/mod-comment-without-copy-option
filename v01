@@ -1,0 +1,153 @@
+// ==UserScript==
+// @name         Mod comment Reason Options to Account Controls
+// @namespace    http://tampermonkey.net/
+// @version      2.3
+// @description  Adds a Reasons button to the Account Controls page and copies the user account URL after the submit button is clicked, unless the account belongs to "Staff Associate."
+// @author       Isaac_NewtonSir
+// @match        https://www.torrentbd.net/account-details.php?id=*
+// @match        https://www.torrentbd.com/account-details.php?id=*
+// @match        https://www.torrentbd.me/account-details.php?id=*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Function to create a button
+    function createButton(text, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+        button.className = 'btn';
+        button.style.margin = '0 5px';
+        button.style.marginBottom = '10px'; // Adjust margin as needed
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    // Function to create a dropdown menu
+    function createDropdown(options, onSelect) {
+        const dropdown = document.createElement('select');
+        dropdown.style.marginLeft = '10px';
+        dropdown.style.display = 'none';
+        dropdown.style.width = '200px'; // Adjust width as needed
+
+        const defaultOption = document.createElement('option');
+        defaultOption.textContent = 'Select a reason';
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        dropdown.appendChild(defaultOption);
+
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            opt.textContent = option;
+            dropdown.appendChild(opt);
+        });
+
+        dropdown.addEventListener('change', function() {
+            onSelect(this.value);
+            dropdown.style.display = 'none';  // Hide dropdown after selection
+        });
+
+        return dropdown;
+    }
+
+    // Function to add text to the textarea
+    function addTextToTextarea(text) {
+        const textarea = document.getElementById('mod_comment');
+        if (textarea) {
+            textarea.value += (textarea.value ? '\n' : '') + text;
+        }
+    }
+
+    // Function to copy the user account URL
+    function copyUserAccountURL() {
+        const userID = new URLSearchParams(window.location.search).get('id');
+        const userAccountURL = `https://www.torrentbd.net/account-details.php?id=${userID}`;
+        navigator.clipboard.writeText(userAccountURL).then(() => {
+            console.log('User account URL copied to clipboard:', userAccountURL);
+        }).catch(err => {
+            console.error('Error copying user account URL:', err);
+        });
+    }
+
+    // Function to check if the user is a "Staff Associate"
+    function isStaffAssociate() {
+        const associateText = document.body.textContent || document.body.innerText;
+        return associateText.includes('Staff Associate');
+    }
+
+    // Wait for the DOM to be fully loaded
+    window.addEventListener('load', function() {
+        // Find the position to insert the button
+        const form = document.querySelector('#acc-form');
+        const textareaDiv = document.querySelector('.input-field.margin-t-40');
+        if (form && textareaDiv) {
+            // Create a container for the button and dropdown
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.top = '160px'; // Adjust top position as needed
+            container.style.right = '235px'; // Adjust left position as needed
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'flex-start';
+            container.style.gap = '10px';
+
+            // Create the Reasons button
+            const reasonsButton = createButton('Reasons', () => {
+                dropdown.style.display = 'inline-block';  // Show dropdown when button is clicked
+            });
+
+            // Create the dropdown with options
+            const options = [
+                'Ask to invite in shoutbox: ',
+                'Asking for seedbouns in the shoutbox: ',
+                'Cleared w/o referral: ',
+                'Device shared with: ',
+                'Dupe of: ',
+                'Dupe attempted: ',
+                'Dupe attempted through FB giveaway: ',
+                'Disabled: ',
+                'Disabled 2FA: ',
+                'Email changed to New_Email: ',
+                'Enabled: ',
+                'Forum restriction removed for now: ',
+                'Helping to create dupe: ',
+                'Helping his invitee to create dupe: ',
+                'Inappropriate username',
+                'Multiple accounts',
+                'Possible dupe: ',
+                'Possible dupe attempted: ',
+                'Possible dupe and peer matched with:',
+                'Peer matched with: ',
+                'Peer matched and Possible dupe with:',
+                'Referral privilege given: ',
+                'Restrictions removed:',
+                'Restrictions removed without referral',
+                'Spamming in the shoutbox: ',
+                'Shout restriction removed for now: ',
+                'Super Seeder badge given for now: ',
+                'Seeding old multiple files to increase his seeding size & upload:',
+                'Username changed to ',
+                'Warning sign removed for now: '
+            ];
+            const dropdown = createDropdown(options, addTextToTextarea);
+
+            // Append the button and dropdown to the container
+            container.appendChild(reasonsButton);
+            container.appendChild(dropdown);
+
+            // Insert the container before the textareaDiv
+            textareaDiv.parentNode.insertBefore(container, textareaDiv);
+
+            // Add a submit event listener to the form
+            form.addEventListener('submit', function(event) {
+                // Only copy the URL if the user is NOT a Staff Associate
+                if (isStaffAssociate()) {
+                    copyUserAccountURL();
+                }
+            });
+        }
+    });
+})();
